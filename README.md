@@ -47,10 +47,10 @@ And then launch the necessary containers:
 ```
 
 This will create the following lxd nodes:
- - load-balancer: This will contain our HTTP loadbalancer that will forward
+ - **load-balancer** - This will contain our HTTP loadbalancer that will forward
    traffic to cluster nodes.
- - controller0: The first member of our Kubernetes control plane cluster
- - controller1: The second member of our Kubernetes control plane cluster
- - controller2: The third member of our Kubernetes control plane cluster
- - worker0: The first worker node for running the workloads we want on Kubernetes
- - worker1: The second worker node for running the workloads we want on Kubernetes
+ - **controller0** - The first member of our Kubernetes control plane cluster
+ - **controller1** - The second member of our Kubernetes control plane cluster
+ - **controller2** - The third member of our Kubernetes control plane cluster
+ - **worker0** - The first worker node for running the workloads we want on Kubernetes
+ - **worker1** - The second worker node for running the workloads we want on Kubernetes
