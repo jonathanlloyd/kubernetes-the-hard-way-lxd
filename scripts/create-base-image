@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+lxc delete kube-base --force 2>/dev/null || true
+lxc launch ubuntu:20.04 kube-base
+lxc exec kube-base -- bash -c "
+	sleep 5
+	apt-get update
+	apt-get install openssh-server -y
+	useradd -m -s /bin/bash $USER
+	usermod -aG sudo $USER
+	echo \"$USER ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
+	mkdir -p /home/$USER/.ssh
+	echo \"$(cat ~/.ssh/id_rsa.pub)\" >> /home/$USER/.ssh/authorized_keys
+"
+lxc stop kube-base
+lxc image delete kube-base || true
+lxc publish kube-base --alias=kube-base
+lxc delete kube-base
