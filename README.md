@@ -2,7 +2,7 @@
 
 ## Step 0 - Install lxd
 
-Follow the [https://linuxcontainers.org/lxd/getting-started-cli](official documentation)
+Follow the [official documentation](https://linuxcontainers.org/lxd/getting-started-cli)
 to install lxd for your platform.
 
 **Optional**
