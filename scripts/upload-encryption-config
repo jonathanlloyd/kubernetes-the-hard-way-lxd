@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+echo "=====> Uploading encryption config to controller nodes"
+while IFS=, read -r NODE_NAME _
+do
+	scp ./build/encryption-config.yaml $NODE_NAME.lxd:~/
+done < <(grep controller nodelist.csv)

@@ -86,3 +86,14 @@ Upload the config files to the appropriate hosts:
 ```
 ./scripts/upload-kube-configs
 ```
+
+## Step 4 - Generating the Data Encryption Config and Key
+Run the encryption config generation script:
+```
+./scripts/generate-encryption-config
+```
+
+Upload the config file to the appropriate hosts:
+```
+./scripts/upload-encryption-config
+```

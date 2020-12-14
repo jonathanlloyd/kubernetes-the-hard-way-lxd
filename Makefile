@@ -9,3 +9,7 @@ certs:
 .PHONY: kube-configs
 kube-configs:
 	@./scripts/generate-kube-configs
+
+.PHONY: encryption-config
+encryption-config:
+	@./scripts/generate-encryption-config
