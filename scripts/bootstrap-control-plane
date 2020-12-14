@@ -91,3 +91,15 @@ do
 	"
 
 done 10< <(grep controller nodelist.csv)
+
+echo "=====> Configuring Kubelet RBAC"
+FIRST_CONTROLLER_NODE=$(grep controller nodelist.csv | head -n 1 | cut -d ',' -f1)
+scp \
+	./k8s-config/clusterrole-kubelet.yaml \
+	./k8s-config/clusterrolebinding-kubelet.yaml \
+	$FIRST_CONTROLLER_NODE.lxd:~/
+ssh -t $FIRST_CONTROLLER_NODE.lxd "
+	kubectl apply --kubeconfig admin.kubeconfig \
+		-f clusterrole-kubelet.yaml \
+		-f clusterrolebinding-kubelet.yaml \
+"
