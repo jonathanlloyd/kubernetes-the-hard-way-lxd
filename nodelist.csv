@@ -1,0 +1,7 @@
+load-balancer,10.152.47.10
+controller0,10.152.47.11
+controller1,10.152.47.12
+controller2,10.152.47.13
+worker0,10.152.47.14
+worker1,10.152.47.15
+worker2,10.152.47.16

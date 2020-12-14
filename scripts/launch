@@ -10,18 +10,14 @@ function launch {
 	ip=$3
 
 	lxc delete $name --force 2>/dev/null || true
-	lxc init $image $name
+	lxc init $image $name </dev/null
 	lxc network attach lxdbr0 $name eth0 eth0
 	lxc config device set $name eth0 ipv4.address $ip
 	lxc start $name
 }
 
-launch kube-base load-balancer 10.152.47.10
 
-launch kube-base controller0 10.152.47.11
-launch kube-base controller1 10.152.47.12
-launch kube-base controller2 10.152.47.13
-
-launch kube-base worker0 10.152.47.14
-launch kube-base worker1 10.152.47.15
-launch kube-base worker2 10.152.47.16
+while IFS=, read -r NODE_NAME NODE_IP
+do
+	launch kube-base $NODE_NAME $NODE_IP
+done < nodelist.csv
