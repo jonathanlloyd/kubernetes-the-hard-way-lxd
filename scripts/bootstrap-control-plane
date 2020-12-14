@@ -1,0 +1,93 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+KUBERNETES_VERSION="1.18.6"
+
+echo "=====> Bootstrapping Kubernetes control plane"
+
+echo "=====> Downloading control plane components"
+mkdir -p ./downloads
+wget --directory-prefix=./downloads -q --show-progress --https-only --timestamping \
+  "https://storage.googleapis.com/kubernetes-release/release/v$KUBERNETES_VERSION/bin/linux/amd64/kube-apiserver" \
+  "https://storage.googleapis.com/kubernetes-release/release/v$KUBERNETES_VERSION/bin/linux/amd64/kube-controller-manager" \
+  "https://storage.googleapis.com/kubernetes-release/release/v$KUBERNETES_VERSION/bin/linux/amd64/kube-scheduler" \
+  "https://storage.googleapis.com/kubernetes-release/release/v$KUBERNETES_VERSION/bin/linux/amd64/kubectl"
+
+PEER_LIST=""
+while IFS=, read -u10 -r _ NODE_IP
+do
+	PEER_LIST="${PEER_LIST}https://${NODE_IP}:2379,"
+done 10< <(grep controller nodelist.csv)
+PEER_LIST=${PEER_LIST::-1}
+
+while IFS=, read -u10 -r NODE_NAME NODE_IP
+do
+	echo "=====> Bootstrapping $NODE_NAME"
+
+	echo "=====> Installing Kubernetes binaries"
+	scp \
+		./downloads/kube-apiserver \
+		./downloads/kube-controller-manager \
+		./downloads/kube-scheduler \
+		./downloads/kubectl \
+		$NODE_NAME.lxd:~/
+	ssh -t $NODE_NAME.lxd "
+		chmod +x \
+			kube-apiserver \
+			kube-controller-manager \
+			kube-scheduler \
+			kubectl
+		sudo mv \
+			kube-apiserver \
+			kube-controller-manager \
+			kube-scheduler \
+			kubectl \
+			/usr/local/bin
+	"
+
+	echo "=====> Configuring API Server"
+	ssh -t $NODE_NAME.lxd "
+		sudo mkdir -p /var/lib/kubernetes/
+		sudo cp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+			service-account-key.pem service-account.pem \
+			encryption-config.yaml /var/lib/kubernetes/
+		echo \"$(cat ./systemd-config/kube-apiserver.service.template \
+			| sed "s/SELF_IP/$NODE_IP/" \
+			| sed "s#PEER_LIST#$PEER_LIST#" \
+		)\" > kube-apiserver.service
+		sudo cp ./kube-apiserver.service /etc/systemd/system/
+	"
+
+	echo "=====> Configuring Controller Manager"
+	ssh -t $NODE_NAME.lxd "
+		sudo cp kube-scheduler.kubeconfig /var/lib/kubernetes/
+		echo \"$(
+			cat ./systemd-config/kube-scheduler.service.template
+		)\" > kube-scheduler.service
+		sudo cp ./kube-scheduler.service /etc/systemd/system/
+	"
+
+	echo "=====> Configuring Scheduler"
+	ssh -t $NODE_NAME.lxd "
+		sudo cp kube-controller-manager.kubeconfig /var/lib/kubernetes/
+		echo \"$(
+			cat ./k8s-config/kube-scheduler.yaml
+		)\" > kube-scheduler.yaml
+		sudo mkdir -p /etc/kubernetes/config/
+		sudo cp ./kube-scheduler.yaml /etc/kubernetes/config/
+		echo \"$(
+			cat ./systemd-config/kube-controller-manager.service.template
+		)\" > kube-controller-manager.service
+		sudo cp ./kube-controller-manager.service /etc/systemd/system/
+	"
+
+	echo "=====> Starting control plane services"
+	ssh -t $NODE_NAME.lxd "
+		sudo systemctl daemon-reload
+		sudo systemctl enable kube-apiserver kube-controller-manager kube-scheduler
+		sudo systemctl start kube-apiserver kube-controller-manager kube-scheduler
+	"
+
+done 10< <(grep controller nodelist.csv)

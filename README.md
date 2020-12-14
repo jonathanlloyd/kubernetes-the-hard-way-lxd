@@ -103,3 +103,42 @@ Run the etcd cluster boostrap script:
 ```
 ./scripts/bootstrap-etcd
 ```
+
+### Validate
+SSH into a controller node and run the following command:
+```
+etcdctl --write-out=table --cacert=ca.pem --cert=kubernetes.pem --key=kubernetes-key.pem endpoint status --cluster
+```
+
+If all went well, you should see something like the following:
+```
++---------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+|         ENDPOINT          |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
++---------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+| https://10.152.47.12:2379 | 30d01160740f2185 |  3.4.14 |   20 kB |     false |      false |         2 |          9 |                  9 |        |
+| https://10.152.47.11:2379 | 34d0073e045c58c3 |  3.4.14 |   20 kB |      true |      false |         2 |          9 |                  9 |        |
+| https://10.152.47.13:2379 | a6d5fe81fcae23d1 |  3.4.14 |   20 kB |     false |      false |         2 |          9 |                  9 |        |
++---------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+```
+
+## Step 5 - Bootstrapping the Kubernetes Control Plane
+Run the control plane boostrap script:
+```
+./scripts/bootstrap-control-plane
+```
+
+### Validate
+SSH into a control plane node and run:
+```
+kubectl get componentstatuses --kubeconfig admin.kubeconfig
+```
+
+You should see something like:
+```
+NAME                 STATUS    MESSAGE             ERROR
+scheduler            Healthy   ok                  
+controller-manager   Healthy   ok                  
+etcd-0               Healthy   {"health":"true"}   
+etcd-1               Healthy   {"health":"true"}   
+etcd-2               Healthy   {"health":"true"}   
+```

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+./scripts/clean
+./scripts/launch
+
+./scripts/generate-certs
+./scripts/upload-certs
+
+./scripts/generate-kube-configs
+./scripts/upload-kube-configs
+
+./scripts/generate-encryption-config
+./scripts/upload-encryption-config
+
+./scripts/bootstrap-etcd
+./scripts/bootstrap-control-plane
