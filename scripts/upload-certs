@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+pushd ./build/certs
+
+echo "=====> Uploading certs to controller nodes"
+while IFS=, read -r NODE_NAME _
+do
+	scp ca.pem ca-key.pem \
+		kubernetes.pem kubernetes-key.pem \
+		service-account.pem service-account-key.pem $NODE_NAME.lxd:~/
+done < <(grep controller ../../nodelist.csv)
+
+echo "=====> Uploading certs to worker nodes"
+while IFS=, read -r NODE_NAME _
+do
+	scp ca.pem $NODE_NAME.pem $NODE_NAME-key.pem $NODE_NAME.lxd:~/
+done < <(grep worker ../../nodelist.csv)
+
+popd
