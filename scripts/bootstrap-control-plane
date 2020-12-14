@@ -103,3 +103,24 @@ ssh -t $FIRST_CONTROLLER_NODE.lxd "
 		-f clusterrole-kubelet.yaml \
 		-f clusterrolebinding-kubelet.yaml \
 "
+
+echo "=====> Configuring load balancer"
+BACKEND_SERVICES=""
+while IFS=, read -u10 -r NODE_NAME _
+do
+  BACKEND_SERVICES="${BACKEND_SERVICES}\tserver $NODE_NAME $NODE_NAME.lxd:6443 check\n"
+done 10< <(grep controller nodelist.csv)
+BACKEND_SERVICES=${BACKEND_SERVICES::-2}
+
+LOAD_BALANCER_IP=$(grep load nodelist.csv | head -n 1 | cut -d ',' -f2)
+
+ssh -t load-balancer.lxd "
+	sudo apt-get install haproxy -y
+	echo \"$(
+		cat ./haproxy-config/haproxy.cfg.template \
+			| sed "s/SELF_IP/$LOAD_BALANCER_IP/" \
+			| sed "s#BACKEND_SERVICES#$BACKEND_SERVICES#" \
+	)\" > haproxy.cfg
+	sudo cp haproxy.cfg /etc/haproxy
+	sudo systemctl restart haproxy
+"

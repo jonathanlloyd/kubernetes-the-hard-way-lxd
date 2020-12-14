@@ -65,7 +65,7 @@ CONTROLLER_IPS=${CONTROLLER_IPS::-1}
 echo $CONTROLLER_IPS
 
 KUBERNETES_PUBLIC_ADDRESS=$(grep load-balancer ../../nodelist.csv | cut -d ',' -f 2)
-KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+KUBERNETES_HOSTNAMES=load-balancer.lxd,kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
 
 cfssl gencert \
   -ca=ca.pem \
