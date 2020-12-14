@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 mkdir -p ./build/certs
 pushd ./build/certs
-echo "Generating CA cert & keys"
+echo "=====> Generating CA cert & keys"
 cfssl gencert -initca ../../cfssl-config/ca-csr.json | cfssljson -bare ca
 
 echo "=====> Generating admin client cert"

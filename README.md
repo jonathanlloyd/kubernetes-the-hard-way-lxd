@@ -75,3 +75,14 @@ Upload the certs to the appropriate hosts:
 ```
 ./scripts/upload-certs
 ```
+
+## Step 3 - Generating Kubernetes Configuration Files for Authentication
+Run the config generation script:
+```
+./scripts/generate-kube-configs
+```
+
+Upload the config files to the appropriate hosts:
+```
+./scripts/upload-kube-configs
+```

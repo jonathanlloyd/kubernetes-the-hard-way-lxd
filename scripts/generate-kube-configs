@@ -1,0 +1,114 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+mkdir -p ./build/kube-configs
+pushd ./build/kube-configs
+
+KUBERNETES_PUBLIC_ADDRESS=$(grep load-balancer ../../nodelist.csv | cut -d ',' -f 2)
+
+echo "=====> Generating worker config"
+while IFS=, read -r NODE_NAME _
+do
+    kubectl config set-cluster kubernetes-the-hard-way \
+    --certificate-authority=../certs/ca.pem \
+    --embed-certs=true \
+    --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
+    --kubeconfig=${NODE_NAME}.kubeconfig
+
+  kubectl config set-credentials system:node:${NODE_NAME} \
+    --client-certificate=../certs/${NODE_NAME}.pem \
+    --client-key=../certs/${NODE_NAME}-key.pem \
+    --embed-certs=true \
+    --kubeconfig=${NODE_NAME}.kubeconfig
+
+  kubectl config set-context default \
+    --cluster=kubernetes-the-hard-way \
+    --user=system:node:${NODE_NAME} \
+    --kubeconfig=${NODE_NAME}.kubeconfig
+
+  kubectl config use-context default --kubeconfig=${NODE_NAME}.kubeconfig
+done < <(grep worker ../../nodelist.csv)
+
+echo "=====> Generating kube proxy config"
+kubectl config set-cluster kubernetes-the-hard-way \
+  --certificate-authority=../certs/ca.pem \
+  --embed-certs=true \
+  --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
+  --kubeconfig=kube-proxy.kubeconfig
+
+kubectl config set-credentials system:kube-proxy \
+  --client-certificate=../certs/kube-proxy.pem \
+  --client-key=../certs/kube-proxy-key.pem \
+  --embed-certs=true \
+  --kubeconfig=kube-proxy.kubeconfig
+
+kubectl config set-context default \
+  --cluster=kubernetes-the-hard-way \
+  --user=system:kube-proxy \
+  --kubeconfig=kube-proxy.kubeconfig
+
+kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
+
+echo "=====> Generating controller manager config"
+kubectl config set-cluster kubernetes-the-hard-way \
+  --certificate-authority=../certs/ca.pem \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443 \
+  --kubeconfig=kube-controller-manager.kubeconfig
+
+kubectl config set-credentials system:kube-controller-manager \
+  --client-certificate=../certs/kube-controller-manager.pem \
+  --client-key=../certs/kube-controller-manager-key.pem \
+  --embed-certs=true \
+  --kubeconfig=kube-controller-manager.kubeconfig
+
+kubectl config set-context default \
+  --cluster=kubernetes-the-hard-way \
+  --user=system:kube-controller-manager \
+  --kubeconfig=kube-controller-manager.kubeconfig
+
+kubectl config use-context default --kubeconfig=kube-controller-manager.kubeconfig
+
+echo "=====> Generating scheduler config"
+kubectl config set-cluster kubernetes-the-hard-way \
+  --certificate-authority=../certs/ca.pem \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443 \
+  --kubeconfig=kube-scheduler.kubeconfig
+
+kubectl config set-credentials system:kube-scheduler \
+  --client-certificate=../certs/kube-scheduler.pem \
+  --client-key=../certs/kube-scheduler-key.pem \
+  --embed-certs=true \
+  --kubeconfig=kube-scheduler.kubeconfig
+
+kubectl config set-context default \
+  --cluster=kubernetes-the-hard-way \
+  --user=system:kube-scheduler \
+  --kubeconfig=kube-scheduler.kubeconfig
+
+kubectl config use-context default --kubeconfig=kube-scheduler.kubeconfig
+
+echo "=====> Generating admin user config"
+kubectl config set-cluster kubernetes-the-hard-way \
+  --certificate-authority=../certs/ca.pem \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443 \
+  --kubeconfig=admin.kubeconfig
+
+kubectl config set-credentials admin \
+  --client-certificate=../certs/admin.pem \
+  --client-key=../certs/admin-key.pem \
+  --embed-certs=true \
+  --kubeconfig=admin.kubeconfig
+
+kubectl config set-context default \
+  --cluster=kubernetes-the-hard-way \
+  --user=admin \
+  --kubeconfig=admin.kubeconfig
+
+kubectl config use-context default --kubeconfig=admin.kubeconfig
+
+popd
