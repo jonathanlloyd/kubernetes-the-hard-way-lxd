@@ -36,7 +36,7 @@ sudo systemctl enable systemd-networkd
 Restart your machine
 
 
-## Step 1 - Provisioning compute resources
+## Step 1 - Provisioning Compute Resources
 
 Use the provided script to create the lxd base image:
 ```
@@ -56,3 +56,22 @@ This will create the following lxd nodes:
  - **controller2** - The third member of our Kubernetes control plane cluster
  - **worker0** - The first worker node for running the workloads we want on Kubernetes
  - **worker1** - The second worker node for running the workloads we want on Kubernetes
+
+
+## Step 2 - Provisioning the CA and Generating TLS Certificates
+Install `cfssl` tools:
+```
+go get -u github.com/cloudflare/cfssl/cmd/cfssl
+go get -u github.com/cloudflare/cfssl/cmd/cfssljson
+```
+
+Run the cert generation script:
+```
+./scripts/generate-certs
+```
+You should see several CA/client certs in the project dir
+
+Upload the certs to the appropriate hosts:
+```
+./scripts/upload-certs
+```

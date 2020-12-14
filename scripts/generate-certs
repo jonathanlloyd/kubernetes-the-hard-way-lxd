@@ -1,0 +1,78 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+mkdir -p ./build/certs
+pushd ./build/certs
+echo "Generating CA cert & keys"
+cfssl gencert -initca ../../cfssl-config/ca-csr.json | cfssljson -bare ca
+
+echo "=====> Generating admin client cert"
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=../../cfssl-config/ca-config.json \
+  -profile=kubernetes \
+  ../../cfssl-config/admin-csr.json | cfssljson -bare admin
+
+echo "=====> Generating worker client certs"
+while IFS=, read -r NODE_NAME NODE_IP
+do
+  CSR_FILE="$NODE_NAME-csr.json"
+  cat ../../cfssl-config/worker-csr-template.json | sed "s/INSTANCE_NAME/$NODE_NAME/" > $CSR_FILE
+  cfssl gencert \
+    -ca=ca.pem \
+    -ca-key=ca-key.pem \
+    -config=../../cfssl-config/ca-config.json \
+    -hostname="$NODE_NAME,$NODE_IP" \
+    -profile=kubernetes \
+    $CSR_FILE | cfssljson -bare $NODE_NAME
+  rm $CSR_FILE
+done < <(grep worker ../../nodelist.csv)
+
+echo "=====> Generating controller mananger cert"
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=../../cfssl-config/ca-config.json \
+  -profile=kubernetes \
+  ../../cfssl-config/kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
+
+echo "=====> Generating kube proxy cert"
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=../../cfssl-config/ca-config.json \
+  -profile=kubernetes \
+  ../../cfssl-config/kube-proxy-csr.json | cfssljson -bare kube-proxy
+
+echo "=====> Generating kube scheduler cert"
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=../../cfssl-config/ca-config.json \
+  -profile=kubernetes \
+  ../../cfssl-config/kube-scheduler-csr.json | cfssljson -bare kube-scheduler
+
+echo "=====> Generating kube API cert"
+KUBERNETES_PUBLIC_ADDRESS=$(grep load-balancer ../../nodelist.csv | cut -d ',' -f 2)
+KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=../../cfssl-config/ca-config.json \
+  -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -profile=kubernetes \
+  ../../cfssl-config/kubernetes-csr.json | cfssljson -bare kubernetes
+
+echo "=====> Generating service account keypair"
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=../../cfssl-config/ca-config.json \
+  -profile=kubernetes \
+  ../../cfssl-config/service-account-csr.json | cfssljson -bare service-account
+
+popd
