@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+pushd ./build/kube-configs
+
+echo "=====> Uploading kube configs to controller nodes"
+while IFS=, read -r NODE_NAME _
+do
+	scp admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig $NODE_NAME.lxd:~/
+done < <(grep controller ../../nodelist.csv)
+
+echo "=====> Uploading kube configs to worker nodes"
+while IFS=, read -r NODE_NAME _
+do
+	scp $NODE_NAME.kubeconfig kube-proxy.kubeconfig $NODE_NAME.lxd:~/
+done < <(grep worker ../../nodelist.csv)
+
+popd
