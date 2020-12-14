@@ -56,6 +56,14 @@ cfssl gencert \
   ../../cfssl-config/kube-scheduler-csr.json | cfssljson -bare kube-scheduler
 
 echo "=====> Generating kube API cert"
+CONTROLLER_IPS=""
+while IFS=, read -u10 -r _ NODE_IP
+do
+	CONTROLLER_IPS="$CONTROLLER_IPS$NODE_IP,"
+done 10< <(grep controller ../../nodelist.csv)
+CONTROLLER_IPS=${CONTROLLER_IPS::-1}
+echo $CONTROLLER_IPS
+
 KUBERNETES_PUBLIC_ADDRESS=$(grep load-balancer ../../nodelist.csv | cut -d ',' -f 2)
 KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
 
@@ -63,7 +71,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=../../cfssl-config/ca-config.json \
-  -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -hostname=${CONTROLLER_IPS},${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   ../../cfssl-config/kubernetes-csr.json | cfssljson -bare kubernetes
 

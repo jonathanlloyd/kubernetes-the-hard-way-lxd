@@ -97,3 +97,9 @@ Upload the config file to the appropriate hosts:
 ```
 ./scripts/upload-encryption-config
 ```
+
+## Step 5 - Bootstrapping the etcd Cluster
+Run the etcd cluster boostrap script:
+```
+./scripts/bootstrap-etcd
+```

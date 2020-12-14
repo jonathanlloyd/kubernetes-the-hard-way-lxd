@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+ETCD_VERSION="3.4.14"
+
+echo "=====> Bootstrapping etcd cluster"
+
+echo "=====> Downloading etcd"
+mkdir -p ./downloads
+wget --directory-prefix=./downloads -q --show-progress --https-only --timestamping \
+	"https://github.com/etcd-io/etcd/releases/download/v$ETCD_VERSION/etcd-v$ETCD_VERSION-linux-amd64.tar.gz"
+
+PEER_LIST=""
+while IFS=, read -u10 -r NODE_NAME NODE_IP
+do
+	PEER_LIST="$PEER_LIST$NODE_NAME=https://$NODE_IP:2380,"
+done 10< <(grep controller nodelist.csv)
+PEER_LIST=${PEER_LIST::-1}
+
+while IFS=, read -u10 -r NODE_NAME NODE_IP
+do
+	echo "=====> Bootstrapping $NODE_NAME"
+	echo "=====> Installing etcd binaries"
+	scp ./downloads/etcd-v$ETCD_VERSION-linux-amd64.tar.gz $NODE_NAME.lxd:~/
+	ssh -t $NODE_NAME.lxd "
+		tar -xf etcd-v$ETCD_VERSION-linux-amd64.tar.gz
+		sudo mv etcd-v$ETCD_VERSION-linux-amd64/etcd* /usr/local/bin/
+		sudo mkdir -p /etc/etcd /var/lib/etcd
+		sudo chmod 700 /var/lib/etcd
+		sudo cp ca.pem kubernetes-key.pem kubernetes.pem /etc/etcd/
+		echo \"$(cat ./systemd-config/etcd.service.template \
+			| sed "s/SELF_NAME/$NODE_NAME/" \
+			| sed "s/SELF_IP/$NODE_IP/" \
+			| sed "s#PEER_LIST#$PEER_LIST#" \
+		)\" > etcd.service
+		sudo cp ./etcd.service /etc/systemd/system/
+		sudo systemctl daemon-reload
+	"
+done 10< <(grep controller nodelist.csv)
+
+while IFS=, read -u10 -r NODE_NAME NODE_IP
+do
+	echo "=====> Starting etcd on $NODE_NAME"
+	ssh -t $NODE_NAME.lxd "
+		sudo systemctl enable etcd
+		sudo systemctl start --no-block etcd
+	"
+done 10< <(grep controller nodelist.csv)

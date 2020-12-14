@@ -4,20 +4,20 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 function launch {
-	sleep 1
 	image=$1
 	name=$2
 	ip=$3
+	echo "=====> Launching $name"
 
 	lxc delete $name --force 2>/dev/null || true
-	lxc init $image $name </dev/null
+	lxc init $image $name
 	lxc network attach lxdbr0 $name eth0 eth0
 	lxc config device set $name eth0 ipv4.address $ip
 	lxc start $name
 }
 
 
-while IFS=, read -r NODE_NAME NODE_IP
+while IFS=, read -u10 -r NODE_NAME NODE_IP
 do
 	launch kube-base $NODE_NAME $NODE_IP
-done < nodelist.csv
+done 10< nodelist.csv
